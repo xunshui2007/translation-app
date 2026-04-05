@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>泰语翻译助手 | Thai Translator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 800px;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .flags {
+            font-size: 40px;
+            margin-bottom: 15px;
+        }
+        
+        .translator {
+            padding: 30px;
+        }
+        
+        .language-selector {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .lang-btn {
+            padding: 12px 24px;
+            border: 2px solid #667eea;
+            background: white;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .lang-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .lang-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .swap-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: #667eea;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .swap-btn:hover {
+            background: #764ba2;
+            transform: rotate(180deg);
+        }
+        
+        .translation-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 600px) {
+            .translation-area {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .text-box {
+            position: relative;
+        }
+        
+        .text-box label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            resize: none;
+            transition: border-color 0.3s;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .output-text {
+            background: #f8f9fa;
+            min-height: 200px;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 16px;
+            line-height: 1.6;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .translate-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .translate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .translate-btn:active {
+            transform: translateY(0);
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e0e0e0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .phrases {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        
+        .phrases h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .phrase-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .phrase-item {
+            padding: 10px 15px;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .phrase-item:hover {
+            background: #667eea;
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .phrase-item .thai {
+            display: block;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .phrase-item .chinese {
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="flags">🇨🇳 ↔ 🇹🇭</div>
+            <h1>泰语翻译助手</h1>
+            <p>Thai Translation Assistant</p>
+        </div>
+        
+        <div class="translator">
+            <div class="language-selector">
+                <button class="lang-btn active" id="zh-to-th">中文 → 泰语</button>
+                <button class="swap-btn" id="swap">⇄</button>
+                <button class="lang-btn" id="th-to-zh">泰语 → 中文</button>
+            </div>
+            
+            <div class="translation-area">
+                <div class="text-box">
+                    <label id="input-label">输入中文</label>
+                    <textarea id="input-text" placeholder="请输入要翻译的内容..."></textarea>
+                </div>
+                <div class="text-box">
+                    <label id="output-label">泰语翻译</label>
+                    <div class="output-text" id="output-text"></div>
+                </div>
+            </div>
+            
+            <button class="translate-btn" id="translate-btn">翻译 Translate</button>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>翻译中...</p>
+            </div>
+            
+            <div class="phrases">
+                <h3>📚 常用泰语短语</h3>
+                <div class="phrase-list">
+                    <div class="phrase-item" data-thai="สวัสดี" data-chinese="你好">
+                        <span class="chinese">你好</span>
+                        <span class="thai">สวัสดี</span>
+                    </div>
+                    <div class="phrase-item" data-thai="ขอบคุณ" data-chinese="谢谢">
+                        <span class="chinese">谢谢</span>
+                        <span class="thai">ขอบคุณ</span>
+                    </div>
+                    <div class="phrase-item" data-thai="ขอโทษ" data-chinese="对不起">
+                        <span class="chinese">对不起</span>
+                        <span class="thai">ขอโทษ</span>
+                    </div>
+                    <div class="phrase-item" data-thai="ไม่เป็นไร" data-chinese="没关系">
+                        <span class="chinese">没关系</span>
+                        <span class="thai">ไม่เป็นไร</span>
+                    </div>
+                    <div class="phrase-item" data-thai="เท่าไร" data-chinese="多少钱">
+                        <span class="chinese">多少钱</span>
+                        <span class="thai">เท่าไร</span>
+                    </div>
+                    <div class="phrase-item" data-thai="อร่อยมาก" data-chinese="很好吃">
+                        <span class="chinese">很好吃</span>
+                        <span class="thai">อร่อยมาก</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let sourceLang = 'zh';
+        let targetLang = 'th';
+        
+        // 语言切换
+        document.getElementById('zh-to-th').addEventListener('click', function() {
+            sourceLang = 'zh';
+            targetLang = 'th';
+            updateLabels();
+            updateButtons();
+        });
+        
+        document.getElementById('th-to-zh').addEventListener('click', function() {
+            sourceLang = 'th';
+            targetLang = 'zh';
+            updateLabels();
+            updateButtons();
+        });
+        
+        document.getElementById('swap').addEventListener('click', function() {
+            const temp = sourceLang;
+            sourceLang = targetLang;
+            targetLang = temp;
+            updateLabels();
+            updateButtons();
+            
+            // 交换文本
+            const input = document.getElementById('input-text');
+            const output = document.getElementById('output-text');
+            input.value = output.textContent;
+        });
+        
+        function updateLabels() {
+            const inputLabel = document.getElementById('input-label');
+            const outputLabel = document.getElementById('output-label');
+            
+            if (sourceLang === 'zh') {
+                inputLabel.textContent = '输入中文';
+                outputLabel.textContent = '泰语翻译';
+                document.getElementById('input-text').placeholder = '请输入中文内容...';
+            } else {
+                inputLabel.textContent = '输入泰语';
+                outputLabel.textContent = '中文翻译';
+                document.getElementById('input-text').placeholder = '请输入泰语内容...';
+            }
+        }
+        
+        function updateButtons() {
+            document.getElementById('zh-to-th').classList.toggle('active', sourceLang === 'zh');
+            document.getElementById('th-to-zh').classList.toggle('active', sourceLang === 'th');
+        }
+        
+        // 翻译功能
+        document.getElementById('translate-btn').addEventListener('click', translate);
+        document.getElementById('input-text').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                translate();
+            }
+        });
+        
+        async function translate() {
+            const text = document.getElementById('input-text').value.trim();
+            if (!text) return;
+            
+            const loading = document.getElementById('loading');
+            const output = document.getElementById('output-text');
+            const btn = document.getElementById('translate-btn');
+            
+            loading.classList.add('show');
+            btn.disabled = true;
+            output.textContent = '';
+            
+            try {
+                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data && data[0]) {
+                    const translated = data[0].map(item => item[0]).join('');
+                    output.textContent = translated;
+                }
+            } catch (error) {
+                output.textContent = '翻译失败，请稍后重试';
+                console.error(error);
+            } finally {
+                loading.classList.remove('show');
+                btn.disabled = false;
+            }
+        }
+        
+        // 常用短语点击
+        document.querySelectorAll('.phrase-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const chinese = this.dataset.chinese;
+                const thai = this.dataset.thai;
+                
+                document.getElementById('input-text').value = sourceLang === 'zh' ? chinese : thai;
+                document.getElementById('output-text').textContent = sourceLang === 'zh' ? thai : chinese;
+            });
+        });
+    </script>
+</body>
+</html>
