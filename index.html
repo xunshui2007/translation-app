@@ -305,7 +305,8 @@
         
         <div class="translator">
             <div class="engine-selector">
-                <button class="engine-btn active" data-engine="google">Google</button>
+                <button class="engine-btn active" data-engine="bing">Bing</button>
+                <button class="engine-btn" data-engine="google">Google</button>
                 <button class="engine-btn" data-engine="mymemory">MyMemory</button>
                 <button class="engine-btn" data-engine="libre">LibreTranslate</button>
             </div>
@@ -373,10 +374,30 @@
     <script>
         let sourceLang = 'zh';
         let targetLang = 'th';
-        let currentEngine = 'google';
+        let currentEngine = 'bing';
         
         // 翻译引擎配置
         const engines = {
+            bing: {
+                name: 'Bing Translator',
+                translate: async (text, sl, tl) => {
+                    // Bing 翻译 API
+                    const url = `https://www.bing.com/translator/api/translate/v1/translate?from=${sl}&to=${tl}&text=${encodeURIComponent(text)}`;
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && data.translationText) {
+                            return data.translationText;
+                        }
+                    }
+                    throw new Error('翻译失败');
+                }
+            },
             google: {
                 name: 'Google Translate',
                 translate: async (text, sl, tl) => {
