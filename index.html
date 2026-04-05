@@ -56,6 +56,34 @@
             padding: 30px;
         }
         
+        .engine-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .engine-btn {
+            padding: 8px 16px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .engine-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .engine-btn:hover {
+            border-color: #667eea;
+        }
+        
         .language-selector {
             display: flex;
             justify-content: center;
@@ -147,6 +175,7 @@
             font-size: 16px;
             line-height: 1.6;
             border: 2px solid #e0e0e0;
+            white-space: pre-wrap;
         }
         
         .translate-btn {
@@ -172,6 +201,12 @@
             transform: translateY(0);
         }
         
+        .translate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
         .loading {
             display: none;
             text-align: center;
@@ -194,6 +229,19 @@
         
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+        
+        .error-msg {
+            color: #e74c3c;
+            padding: 10px;
+            background: #fdf2f2;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .error-msg.show {
+            display: block;
         }
         
         .phrases {
@@ -238,6 +286,13 @@
         .phrase-item .chinese {
             font-weight: 600;
         }
+        
+        .status-bar {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -249,6 +304,12 @@
         </div>
         
         <div class="translator">
+            <div class="engine-selector">
+                <button class="engine-btn active" data-engine="google">Google</button>
+                <button class="engine-btn" data-engine="mymemory">MyMemory</button>
+                <button class="engine-btn" data-engine="libre">LibreTranslate</button>
+            </div>
+            
             <div class="language-selector">
                 <button class="lang-btn active" id="zh-to-th">中文 → 泰语</button>
                 <button class="swap-btn" id="swap">⇄</button>
@@ -268,10 +329,14 @@
             
             <button class="translate-btn" id="translate-btn">翻译 Translate</button>
             
+            <div class="error-msg" id="error-msg"></div>
+            
             <div class="loading" id="loading">
                 <div class="spinner"></div>
                 <p>翻译中...</p>
             </div>
+            
+            <div class="status-bar" id="status-bar"></div>
             
             <div class="phrases">
                 <h3>📚 常用泰语短语</h3>
@@ -308,6 +373,70 @@
     <script>
         let sourceLang = 'zh';
         let targetLang = 'th';
+        let currentEngine = 'google';
+        
+        // 翻译引擎配置
+        const engines = {
+            google: {
+                name: 'Google Translate',
+                translate: async (text, sl, tl) => {
+                    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    if (data && data[0]) {
+                        return data[0].map(item => item[0]).join('');
+                    }
+                    throw new Error('翻译失败');
+                }
+            },
+            mymemory: {
+                name: 'MyMemory',
+                translate: async (text, sl, tl) => {
+                    const langpair = `${sl}|${tl}`;
+                    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langpair}`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    if (data.responseStatus === 200 && data.responseData) {
+                        return data.responseData.translatedText;
+                    }
+                    throw new Error('翻译失败');
+                }
+            },
+            libre: {
+                name: 'LibreTranslate',
+                translate: async (text, sl, tl) => {
+                    // 使用公共 LibreTranslate 服务器
+                    const url = 'https://libretranslate.com/translate';
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            q: text,
+                            source: sl,
+                            target: tl,
+                            format: 'text'
+                        }),
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const data = await response.json();
+                    if (data.translatedText) {
+                        return data.translatedText;
+                    }
+                    throw new Error('翻译失败');
+                }
+            }
+        };
+        
+        // 引擎切换
+        document.querySelectorAll('.engine-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.engine-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentEngine = this.dataset.engine;
+                document.getElementById('status-bar').textContent = `当前引擎: ${engines[currentEngine].name}`;
+            });
+        });
         
         // 语言切换
         document.getElementById('zh-to-th').addEventListener('click', function() {
@@ -357,6 +486,14 @@
             document.getElementById('th-to-zh').classList.toggle('active', sourceLang === 'th');
         }
         
+        // 显示错误
+        function showError(msg) {
+            const errorEl = document.getElementById('error-msg');
+            errorEl.textContent = msg;
+            errorEl.classList.add('show');
+            setTimeout(() => errorEl.classList.remove('show'), 3000);
+        }
+        
         // 翻译功能
         document.getElementById('translate-btn').addEventListener('click', translate);
         document.getElementById('input-text').addEventListener('keydown', function(e) {
@@ -372,28 +509,45 @@
             const loading = document.getElementById('loading');
             const output = document.getElementById('output-text');
             const btn = document.getElementById('translate-btn');
+            const statusBar = document.getElementById('status-bar');
             
             loading.classList.add('show');
             btn.disabled = true;
             output.textContent = '';
             
-            try {
-                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
-                
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                if (data && data[0]) {
-                    const translated = data[0].map(item => item[0]).join('');
-                    output.textContent = translated;
+            // 尝试所有引擎
+            const engineOrder = [currentEngine, ...Object.keys(engines).filter(e => e !== currentEngine)];
+            
+            for (const engineName of engineOrder) {
+                try {
+                    statusBar.textContent = `正在使用 ${engines[engineName].name}...`;
+                    const result = await engines[engineName].translate(text, sourceLang, targetLang);
+                    output.textContent = result;
+                    statusBar.textContent = `翻译成功 (${engines[engineName].name})`;
+                    
+                    // 如果不是首选引擎，更新按钮状态
+                    if (engineName !== currentEngine) {
+                        document.querySelectorAll('.engine-btn').forEach(b => b.classList.remove('active'));
+                        document.querySelector(`[data-engine="${engineName}"]`).classList.add('active');
+                        currentEngine = engineName;
+                    }
+                    
+                    return;
+                } catch (error) {
+                    console.log(`${engineName} 翻译失败:`, error);
+                    if (engineName === currentEngine) {
+                        statusBar.textContent = `${engines[engineName].name} 失败，尝试其他引擎...`;
+                    }
                 }
-            } catch (error) {
-                output.textContent = '翻译失败，请稍后重试';
-                console.error(error);
-            } finally {
-                loading.classList.remove('show');
-                btn.disabled = false;
             }
+            
+            // 所有引擎都失败
+            showError('所有翻译引擎都无法连接，请检查网络');
+            output.textContent = '翻译失败';
+            statusBar.textContent = '翻译失败';
+            
+            loading.classList.remove('show');
+            btn.disabled = false;
         }
         
         // 常用短语点击
@@ -406,6 +560,9 @@
                 document.getElementById('output-text').textContent = sourceLang === 'zh' ? thai : chinese;
             });
         });
+        
+        // 初始化状态栏
+        document.getElementById('status-bar').textContent = `当前引擎: ${engines[currentEngine].name}`;
     </script>
 </body>
 </html>
